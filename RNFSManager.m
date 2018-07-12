@@ -53,10 +53,13 @@ RCT_EXPORT_METHOD(readDir:(NSString *)dirPath
   NSFileManager *fileManager = [NSFileManager defaultManager];
   NSError *error = nil;
 
-  NSArray *contents = [fileManager contentsOfDirectoryAtPath:dirPath error:&error];
+  NSArray *pathArr = [dirPath componentsSeparatedByString:@"Documents/"];
+  NSString *documentPath = [NSString stringWithFormat:@"%@Documents",pathArr[0]];
+  
+  NSArray *contents = [fileManager contentsOfDirectoryAtPath:documentPath error:&error];
 
   contents = [contents rnfs_mapObjectsUsingBlock:^id(NSString *obj, NSUInteger idx) {
-    NSString *path = [dirPath stringByAppendingPathComponent:obj];
+    NSString *path = [documentPath stringByAppendingPathComponent:obj];
     NSDictionary *attributes = [fileManager attributesOfItemAtPath:path error:nil];
 
     return @{
