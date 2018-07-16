@@ -1,23 +1,19 @@
 package com.rnfs;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileInputStream;
-import java.io.BufferedInputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.IOException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.HttpURLConnection;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import android.os.AsyncTask;
+import android.util.Base64;
 import android.util.Log;
 
-import android.os.AsyncTask;
-
 import com.facebook.react.bridge.ReadableMapKeySetIterator;
+
+import java.io.BufferedInputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Downloader extends AsyncTask<DownloadParams, int[], DownloadResult> {
   private DownloadParams mParam;
@@ -45,11 +41,11 @@ public class Downloader extends AsyncTask<DownloadParams, int[], DownloadResult>
 
   private void download(DownloadParams param, DownloadResult res) throws Exception {
     InputStream input = null;
-    OutputStream output = null;
+//        OutputStream output = null;
     HttpURLConnection connection = null;
 
     try {
-      connection = (HttpURLConnection)param.src.openConnection();
+      connection = (HttpURLConnection) param.src.openConnection();
 
       ReadableMapKeySetIterator iterator = param.headers.keySetIterator();
 
@@ -67,13 +63,13 @@ public class Downloader extends AsyncTask<DownloadParams, int[], DownloadResult>
       int lengthOfFile = connection.getContentLength();
 
       boolean isRedirect = (
-        statusCode != HttpURLConnection.HTTP_OK &&
-        (
-          statusCode == HttpURLConnection.HTTP_MOVED_PERM ||
-          statusCode == HttpURLConnection.HTTP_MOVED_TEMP ||
-          statusCode == 307 ||
-          statusCode == 308
-        )
+              statusCode != HttpURLConnection.HTTP_OK &&
+                      (
+                              statusCode == HttpURLConnection.HTTP_MOVED_PERM ||
+                                      statusCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+                                      statusCode == 307 ||
+                                      statusCode == 308
+                      )
       );
 
       if (isRedirect) {
@@ -87,7 +83,7 @@ public class Downloader extends AsyncTask<DownloadParams, int[], DownloadResult>
         statusCode = connection.getResponseCode();
         lengthOfFile = connection.getContentLength();
       }
-      if(statusCode >= 200 && statusCode < 300) {
+      if (statusCode >= 200 && statusCode < 300) {
         Map<String, List<String>> headers = connection.getHeaderFields();
 
         Map<String, String> headersFlat = new HashMap<String, String>();
@@ -104,7 +100,7 @@ public class Downloader extends AsyncTask<DownloadParams, int[], DownloadResult>
         mParam.onDownloadBegin.onDownloadBegin(statusCode, lengthOfFile, headersFlat);
 
         input = new BufferedInputStream(connection.getInputStream(), 8 * 1024);
-        output = new FileOutputStream(param.dest);
+//                output = new FileOutputStream(param.dest);
 
         byte data[] = new byte[8 * 1024];
         int total = 0;
@@ -127,15 +123,17 @@ public class Downloader extends AsyncTask<DownloadParams, int[], DownloadResult>
               }
             }
           }
-          output.write(data, 0, count);
+//                    output.write(data, 0, count);
         }
 
-        output.flush();
+//                output.flush();
+        res.data = Base64.encodeToString(data,Base64.DEFAULT);
         res.bytesWritten = total;
+
       }
       res.statusCode = statusCode;
     } finally {
-      if (output != null) output.close();
+//            if (output != null) output.close();
       if (input != null) input.close();
       if (connection != null) connection.disconnect();
     }
