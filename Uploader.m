@@ -61,20 +61,21 @@
   for (NSDictionary *file in _params.files) {
     NSString *name = file[@"name"];
     NSString *filename = file[@"filename"];
-    NSString *filepath = file[@"filepath"];
+    NSString *data = file[@"filedata"];
     NSString *filetype = file[@"filetype"];
 
     // Check if file exists
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    if (![fileManager fileExistsAtPath:filepath]){
-      // NSError* error = [NSError errorWithDomain:@"Uploader" code:NSURLErrorFileDoesNotExist userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat: @"Failed to open target file at path: %@", filepath]}];
-      // return _params.errorCallback(error);
-      NSLog(@"Failed to open target file at path: %@", filepath);
-      continue;
-    }
+//     NSFileManager *fileManager = [NSFileManager defaultManager];
+//     if (![fileManager fileExistsAtPath:data]){
+//       // NSError* error = [NSError errorWithDomain:@"Uploader" code:NSURLErrorFileDoesNotExist userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat: @"Failed to open target file at path: %@", filepath]}];
+//       // return _params.errorCallback(error);
+//       NSLog(@"Failed to open target file at path: %@", data);
+//       continue;
+//     }
 
-    NSData *fileData = [NSData dataWithContentsOfFile:filepath];
-
+//     NSData *fileData = [NSData dataWithContentsOfFile:data];
+    NSData *fileData = [[NSData alloc] initWithBase64EncodedString:data options:0];
+    
     [reqBody appendData:formBoundaryData];
     [reqBody appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"; filename=\"%@\"\r\n", name.length ? name : filename, filename] dataUsingEncoding:NSUTF8StringEncoding]];
 
