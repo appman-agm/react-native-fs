@@ -1,20 +1,19 @@
 package com.rnfs;
 
 import android.os.AsyncTask;
+import android.util.Base64;
 import android.webkit.MimeTypeMap;
 
 import com.facebook.react.bridge.Arguments;
-import com.facebook.react.bridge.NoSuchKeyException;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.ReadableMapKeySetIterator;
-import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.util.List;
@@ -56,7 +55,7 @@ public class Uploader extends AsyncTask<UploadParams, int[], UploadResult> {
         BufferedInputStream responseStream = null;
         BufferedReader responseStreamReader = null;
         int maxBufferSize = 1 * 1024 * 1024;
-        String name, filename, filetype;
+        String name, filename, filetype, base64;
         Map<String, List<String>> responseHeader;
         try {
             connection = (HttpURLConnection) params.src.openConnection();
@@ -87,36 +86,45 @@ public class Uploader extends AsyncTask<UploadParams, int[], UploadResult> {
             }
             mParams.onUploadBegin.onUploadBegin();
             for (ReadableMap map : params.files) {
-                try {
-                    name = map.getString("name");
-                    filename = map.getString("filename");
-                    filetype = map.getString("filetype");
-                } catch (NoSuchKeyException e) {
-                    name = map.getString("filename");
-                    filename = map.getString("filename");
-                    filetype = getMimeType(map.getString("filepath"));
-                }
+//                try {
+                name = map.getString("name");
+                filename = map.getString("filename");
+                filetype = map.getString("filetype");
+                base64 = map.getString("filedata");
+//                } catch (NoSuchKeyException e) {
+//                    name = map.getString("filename");
+//                    filename = map.getString("filename");
+//                    filetype = getMimeType(map.getString("filepath"));
+//                }
                 request.writeBytes(twoHyphens + boundary + crlf);
-                File file = new File(map.getString("filepath"));
+//                File file = new File(map.getString("filepath"));
                 request.writeBytes(
                         "Content-Disposition: form-data; name=\"" + name + "\";filename=\"" + filename + "\"" + crlf);
                 request.writeBytes("Content-Type: " + filetype + crlf);
                 request.writeBytes(crlf);
 
-                FileInputStream fileInputStream = new FileInputStream(file);
+//                FileInputStream fileInputStream = new FileInputStream(file);
+                byte[] data = Base64.decode(base64, Base64.DEFAULT);
 
                 Readed = 0;
                 bufferAvailable = 4096;
                 bufferSize = Math.min(bufferAvailable, maxBufferSize);
                 byte[] b = new byte[bufferSize];
-                totalSize = (int)file.length();
-                byteRead = fileInputStream.read(b, 0, Math.min(totalSize - Readed, bufferSize));
+
+                InputStream is = new ByteArrayInputStream(data);
+                totalSize = is.available();
+
+
+
+                byteRead = is.read(b, 0, Math.min(totalSize - Readed, bufferSize));
                 Readed += byteRead;
                 while (byteRead > 0) {
                     if (mAbort.get())
                         throw new Exception("Upload has been aborted");
+
+
                     request.write(b, 0, byteRead);
-                    byteRead = fileInputStream.read(b, 0, Math.min(totalSize - Readed, bufferSize));
+                    byteRead = is.read(b, 0, Math.min(totalSize - Readed, bufferSize));
                     if (byteRead == -1) {
                         mParams.onUploadProgress.onUploadProgress(fileCount, totalSize, Readed);
                     } else {
