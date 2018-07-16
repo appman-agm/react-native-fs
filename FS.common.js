@@ -58,7 +58,7 @@ type Fields = { [name: string]: string };
 
 type DownloadFileOptions = {
   fromUrl: string;          // URL to download file from
-  toFile: string;           // Local filesystem path to save the file to
+  // toFile: string;           // Local filesystem path to save the file to
   headers?: Headers;        // An object of headers to be passed to the server
   background?: boolean;     // Continue the download in the background after the app terminates (iOS only)
   discretionary?: boolean;  // Allow the OS to control the timing and speed of the download to improve perceived performance  (iOS only)
@@ -132,7 +132,7 @@ type FSInfoResult = {
 /**
  * Generic function used by readFile and readFileAssets
  */
-function readFileGeneric(filepath: string, encodingOrOptions:?string, command: Function) {
+function readFileGeneric(filepath: string, encodingOrOptions: ?string, command: Function) {
   var options = {
     encoding: 'utf8'
   };
@@ -222,11 +222,11 @@ var RNFS = {
   },
 
   resumeDownload(jobId: number): void {
-      RNFSManager.resumeDownload(jobId);
+    RNFSManager.resumeDownload(jobId);
   },
 
   isResumable(jobId: number): Promise<bool> {
-      return RNFSManager.isResumable(jobId);
+    return RNFSManager.isResumable(jobId);
   },
 
   stopUpload(jobId: number): void {
@@ -265,8 +265,8 @@ var RNFS = {
   },
 
   // setReadable for Android
-  setReadable(filepath : string, readable: boolean, ownerOnly: boolean) : Promise<boolean> {
-    return RNFSManager.setReadable(filepath, readable, ownerOnly).then( (result) => {
+  setReadable(filepath: string, readable: boolean, ownerOnly: boolean): Promise<boolean> {
+    return RNFSManager.setReadable(filepath, readable, ownerOnly).then((result) => {
       return result;
     })
   },
@@ -333,7 +333,7 @@ var RNFS = {
   },
 
   // Android only
-  copyFileAssets(filepath: string, destPath:string) {
+  copyFileAssets(filepath: string, destPath: string) {
     if (!RNFSManager.copyFileAssets) {
       throw new Error('copyFileAssets is not available on this platform');
     }
@@ -345,8 +345,8 @@ var RNFS = {
   // with a given width or height
   // @see: https://developer.apple.com/reference/photos/phimagemanager/1616964-requestimageforasset
   copyAssetsFileIOS(imageUri: string, destPath: string, width: number, height: number,
-    scale : number = 1.0, compression : number = 1.0, resizeMode : string = 'contain'  ): Promise<string> {
-    return RNFSManager.copyAssetsFileIOS(imageUri, destPath, width, height, scale, compression, resizeMode );
+    scale: number = 1.0, compression: number = 1.0, resizeMode: string = 'contain'): Promise<string> {
+    return RNFSManager.copyAssetsFileIOS(imageUri, destPath, width, height, scale, compression, resizeMode);
   },
 
   // iOS only
@@ -448,7 +448,7 @@ var RNFS = {
   downloadFile(options: DownloadFileOptions): { jobId: number, promise: Promise<DownloadResult> } {
     if (typeof options !== 'object') throw new Error('downloadFile: Invalid value for argument `options`');
     if (typeof options.fromUrl !== 'string') throw new Error('downloadFile: Invalid value for property `fromUrl`');
-    if (typeof options.toFile !== 'string') throw new Error('downloadFile: Invalid value for property `toFile`');
+    // if (typeof options.toFile !== 'string') throw new Error('downloadFile: Invalid value for property `toFile`');
     if (options.headers && typeof options.headers !== 'object') throw new Error('downloadFile: Invalid value for property `headers`');
     if (options.background && typeof options.background !== 'boolean') throw new Error('downloadFile: Invalid value for property `background`');
     if (options.progressDivider && typeof options.progressDivider !== 'number') throw new Error('downloadFile: Invalid value for property `progressDivider`');
@@ -473,7 +473,7 @@ var RNFS = {
     var bridgeOptions = {
       jobId: jobId,
       fromUrl: options.fromUrl,
-      toFile: normalizeFilePath(options.toFile),
+      // toFile: normalizeFilePath(options.toFile),
       headers: options.headers || {},
       background: !!options.background,
       progressDivider: options.progressDivider || 0,
@@ -487,9 +487,9 @@ var RNFS = {
         subscriptions.forEach(sub => sub.remove());
         return res;
       })
-      .catch( e => {
-        return Promise.reject(e);
-      })
+        .catch(e => {
+          return Promise.reject(e);
+        })
     };
   },
 
