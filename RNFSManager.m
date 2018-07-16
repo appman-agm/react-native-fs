@@ -424,76 +424,82 @@ RCT_EXPORT_METHOD(downloadFile:(NSDictionary *)options
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
-  RNFSDownloadParams* params = [RNFSDownloadParams alloc];
-
-  NSNumber* jobId = options[@"jobId"];
-  params.fromUrl = options[@"fromUrl"];
-  params.toFile = options[@"toFile"];
-  NSDictionary* headers = options[@"headers"];
-  params.headers = headers;
-  NSNumber* background = options[@"background"];
-  params.background = [background boolValue];
-  NSNumber* discretionary = options[@"discretionary"];
-  params.discretionary = [discretionary boolValue];
-  NSNumber* cacheable = options[@"cacheable"];
-  params.cacheable = cacheable ? [cacheable boolValue] : YES;
-  NSNumber* progressDivider = options[@"progressDivider"];
-  params.progressDivider = progressDivider;
-  NSNumber* readTimeout = options[@"readTimeout"];
-  params.readTimeout = readTimeout;
-
-  __block BOOL callbackFired = NO;
-
-  params.completeCallback = ^(NSNumber* statusCode, NSNumber* bytesWritten) {
-    if (callbackFired) {
-      return;
-    }
-    callbackFired = YES;
-
-    NSMutableDictionary* result = [[NSMutableDictionary alloc] initWithDictionary: @{@"jobId": jobId}];
-    if (statusCode) {
-      [result setObject:statusCode forKey: @"statusCode"];
-    }
-    if (bytesWritten) {
-      [result setObject:bytesWritten forKey: @"bytesWritten"];
-    }
-    return resolve(result);
-  };
-
-  params.errorCallback = ^(NSError* error) {
-    if (callbackFired) {
-      return;
-    }
-    callbackFired = YES;
-    return [self reject:reject withError:error];
-  };
-
-  params.beginCallback = ^(NSNumber* statusCode, NSNumber* contentLength, NSDictionary* headers) {
-    [self.bridge.eventDispatcher sendAppEventWithName:[NSString stringWithFormat:@"DownloadBegin-%@", jobId]
-                                                 body:@{@"jobId": jobId,
-                                                        @"statusCode": statusCode,
-                                                        @"contentLength": contentLength,
-                                                        @"headers": headers ?: [NSNull null]}];
-  };
-
-  params.progressCallback = ^(NSNumber* contentLength, NSNumber* bytesWritten) {
-    [self.bridge.eventDispatcher sendAppEventWithName:[NSString stringWithFormat:@"DownloadProgress-%@", jobId]
-                                                 body:@{@"jobId": jobId,
-                                                        @"contentLength": contentLength,
-                                                        @"bytesWritten": bytesWritten}];
-  };
+    RNFSDownloadParams* params = [RNFSDownloadParams alloc];
+    
+    NSNumber* jobId = options[@"jobId"];
+    params.fromUrl = options[@"fromUrl"];
+    params.toFile = options[@"toFile"];
+    NSDictionary* headers = options[@"headers"];
+    params.headers = headers;
+    NSNumber* background = options[@"background"];
+    params.background = [background boolValue];
+    NSNumber* discretionary = options[@"discretionary"];
+    params.discretionary = [discretionary boolValue];
+    NSNumber* cacheable = options[@"cacheable"];
+    params.cacheable = cacheable ? [cacheable boolValue] : YES;
+    NSNumber* progressDivider = options[@"progressDivider"];
+    params.progressDivider = progressDivider;
+    NSNumber* readTimeout = options[@"readTimeout"];
+    params.readTimeout = readTimeout;
+    
+    __block BOOL callbackFired = NO;
+    
+    params.completeCallback = ^(NSNumber* statusCode, NSNumber* bytesWritten, NSString* base64String) {
+        
+        if (callbackFired) {
+            return;
+        }
+        callbackFired = YES;
+        
+        NSMutableDictionary* result = [[NSMutableDictionary alloc] initWithDictionary: @{@"jobId": jobId}];
+        if (statusCode) {
+            [result setObject:statusCode forKey: @"statusCode"];
+        }
+        if (bytesWritten) {
+            [result setObject:bytesWritten forKey: @"bytesWritten"];
+        }
+        if (base64String){
+            [result setObject:base64String forKey:@"data"];
+        }
+        NSLog(@"downloadfile statusCode: %@\ncompleteCallback result: %@", statusCode,result);
+        
+        return resolve(result);
+    };
+    
+    params.errorCallback = ^(NSError* error) {
+        if (callbackFired) {
+            return;
+        }
+        callbackFired = YES;
+        return [self reject:reject withError:error];
+    };
+    
+    params.beginCallback = ^(NSNumber* statusCode, NSNumber* contentLength, NSDictionary* headers) {
+        [self.bridge.eventDispatcher sendAppEventWithName:[NSString stringWithFormat:@"DownloadBegin-%@", jobId]
+                                                     body:@{@"jobId": jobId,
+                                                            @"statusCode": statusCode,
+                                                            @"contentLength": contentLength,
+                                                            @"headers": headers ?: [NSNull null]}];
+    };
+    
+    params.progressCallback = ^(NSNumber* contentLength, NSNumber* bytesWritten) {
+        [self.bridge.eventDispatcher sendAppEventWithName:[NSString stringWithFormat:@"DownloadProgress-%@", jobId]
+                                                     body:@{@"jobId": jobId,
+                                                            @"contentLength": contentLength,
+                                                            @"bytesWritten": bytesWritten}];
+    };
     
     params.resumableCallback = ^() {
         [self.bridge.eventDispatcher sendAppEventWithName:[NSString stringWithFormat:@"DownloadResumable-%@", jobId] body:nil];
     };
-
-  if (!self.downloaders) self.downloaders = [[NSMutableDictionary alloc] init];
-
-  RNFSDownloader* downloader = [RNFSDownloader alloc];
-
-  NSString *uuid = [downloader downloadFile:params];
-
-  [self.downloaders setValue:downloader forKey:[jobId stringValue]];
+    
+    if (!self.downloaders) self.downloaders = [[NSMutableDictionary alloc] init];
+    
+    RNFSDownloader* downloader = [RNFSDownloader alloc];
+    
+    NSString *uuid = [downloader downloadFile:params];
+    
+    [self.downloaders setValue:downloader forKey:[jobId stringValue]];
     if (uuid) {
         if (!self.uuids) self.uuids = [[NSMutableDictionary alloc] init];
         [self.uuids setValue:uuid forKey:[jobId stringValue]];

@@ -27,44 +27,61 @@
     NSString *uuid = nil;
     
     _params = params;
-
-  _bytesWritten = 0;
-
-  NSURL* url = [NSURL URLWithString:_params.fromUrl];
-
-  if ([[NSFileManager defaultManager] fileExistsAtPath:_params.toFile]) {
-    _fileHandle = [NSFileHandle fileHandleForWritingAtPath:_params.toFile];
-
-    if (!_fileHandle) {
-      NSError* error = [NSError errorWithDomain:@"Downloader" code:NSURLErrorFileDoesNotExist
-                                userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat: @"Failed to write target file at path: %@", _params.toFile]}];
-
-      _params.errorCallback(error);
-      return nil;
-    } else {
-      [_fileHandle closeFile];
+    
+    _bytesWritten = 0;
+    
+    NSURL* url = [NSURL URLWithString:_params.fromUrl];
+    
+    if ([[NSFileManager defaultManager] fileExistsAtPath:_params.toFile]) {
+        _fileHandle = [NSFileHandle fileHandleForWritingAtPath:_params.toFile];
+        
+        if (!_fileHandle) {
+            NSError* error = [NSError errorWithDomain:@"Downloader" code:NSURLErrorFileDoesNotExist
+                                             userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat: @"Failed to write target file at path: %@", _params.toFile]}];
+            
+            _params.errorCallback(error);
+            return nil;
+        } else {
+            [_fileHandle closeFile];
+        }
     }
-  }
+    
+    NSURLSessionConfiguration *config;
+    if (_params.background) {
+        uuid = [[NSUUID UUID] UUIDString];
+        config = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:uuid];
+        config.discretionary = _params.discretionary;
+    } else {
+        config = [NSURLSessionConfiguration defaultSessionConfiguration];
+    }
+    
+    if (!_params.cacheable) {
+        config.URLCache = nil;
+    }
+    
+    config.HTTPAdditionalHeaders = _params.headers;
+    config.timeoutIntervalForRequest = [_params.readTimeout intValue] / 1000.0;
+    
+    _session = [NSURLSession sessionWithConfiguration:config delegate:self delegateQueue:nil];
+    //  _task = [_session downloadTaskWithURL:url];
+    
+    _task = [_session downloadTaskWithURL:url completionHandler:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+        NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+        _statusCode = [NSNumber numberWithInteger:httpResponse.statusCode];
+        NSData *data = [NSData dataWithContentsOfURL:location];
+        NSString *base64String = [data base64EncodedStringWithOptions:0];
+        printf("download data %s", base64String.UTF8String);
+        
+        if ([_statusCode isEqualToNumber:[NSNumber numberWithInt:200]]){
+            return _params.completeCallback(_statusCode, _bytesWritten, base64String);
+        }else{
+            NSLog(@"download status code: %@, with error:%@",_statusCode,error);
+            return _params.errorCallback(error);
+        }
+    }];
+    
 
-  NSURLSessionConfiguration *config;
-  if (_params.background) {
-    uuid = [[NSUUID UUID] UUIDString];
-    config = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:uuid];
-    config.discretionary = _params.discretionary;
-  } else {
-    config = [NSURLSessionConfiguration defaultSessionConfiguration];
-  }
-
-  if (!_params.cacheable) {
-    config.URLCache = nil;
-  }
-
-  config.HTTPAdditionalHeaders = _params.headers;
-  config.timeoutIntervalForRequest = [_params.readTimeout intValue] / 1000.0;
-
-  _session = [NSURLSession sessionWithConfiguration:config delegate:self delegateQueue:nil];
-  _task = [_session downloadTaskWithURL:url];
-  [_task resume];
+    [_task resume];
     
     return uuid;
 }
@@ -119,7 +136,7 @@
     NSLog(@"RNFS download: unable to move tempfile to destination. %@, %@", error, error.userInfo);
   }
 
-  return _params.completeCallback(_statusCode, _bytesWritten);
+  return _params.completeCallback(_statusCode, _bytesWritten, @"");
 }
 
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error
